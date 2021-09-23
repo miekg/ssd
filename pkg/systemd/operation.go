@@ -16,7 +16,7 @@ const (
 // OperationToCommand contains a mapping from the operation to the actual
 // command being run.
 var OperationToCommand = map[Operation][]string{
-	List:    {sysctl, usr, "list"},
+	List:    {sysctl, usr, "list-units"},
 	Cat:     {sysctl, usr, "cat"},
 	Start:   {sysctl, usr, "start"},
 	Stop:    {sysctl, usr, "stop"},

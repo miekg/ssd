@@ -46,7 +46,7 @@ handled by the systemd unit files and/or in a script calling `ssdc`.
 The following **OPERATION**s are available:
 
 * `list` - list the loaded unit files, the **SERVICE** is not used in this case and should be
-  omitted. Only .service and .path unit files are shown.
+  omitted. Only .service and .path unit files are shown. This calls `list-units`.
 * `cat` - show the contents of the unit file for **SERVICE**
 * `start`, `stop`, `reload`, `restart`, will call the respective
 * `logs`, show the logs of **SERVICE**, assuming they are in journald.
