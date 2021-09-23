@@ -26,7 +26,8 @@ ssdd [-auth] [-users FILE] [-load DIR] [-p PORT]
 `ssdd` will call into the user systemd that runs under the same user as itself. The file used for
 user authorization is simplistic, it is just one user name per line.
 
-The default port is 9999.
+The default port is 9999. Metrics are served from the same port on the /metrics path. The same port
+also provides a /health handler that return "200 OK".
 
 It's assumed `ssdd` is ran via systemd as well, so all interactions it provides can be applied to
 itself.
@@ -76,6 +77,13 @@ For authorization the user is looked up a table (=file). If there user is presen
 operations is allowed, otherwise it is denied.
 
 If the file is empty, the system will fail open and all user are allowed to execute operations.
+
+## Metrics
+
+The following metrics are exposed:
+
+* `ssdd_request_total`, a counter of all incoming requests
+* `ssdd_errors_total`, a counter of all requests leading to an error
 
 ## Notes
 
