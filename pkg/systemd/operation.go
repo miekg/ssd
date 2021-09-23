@@ -64,14 +64,23 @@ func Command(op Operation, opts Options, service string) (*exec.Cmd, error) {
 	cmdline := make([]string, len(args))
 	copy(cmdline, args)
 
-	// todo add service
-
 	c := exec.Command(cmdline[0], cmdline[1:]...)
+	if service != "" {
+		c.Args = append(c.Args, service)
+	}
+
 	return c, nil
 }
 
 // Run runs command c and writes the response back to the user. In case of
 // logging this will be a streaming response.
-func Run(c *exec.Cmd, opts Options, w http.ResponseWriter) error {
+func Run(c *exec.Cmd, stream bool, w http.ResponseWriter) error {
+	out, err := c.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to execute %s: %s", c, err)
+	}
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+	w.Write(out)
 	return nil
 }
