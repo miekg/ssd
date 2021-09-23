@@ -40,7 +40,7 @@ ssdc ADDRESS OPERATION [SERVICE]
 * **OPERATION** is the systemd operation you want to perform, see below
 * **SERVICE** is the service you are operating on, may include the extension
 
-There is no provisioning made to operate on multiple **ADDRESSES** and/or **SERVICE**s, as to
+There is no provisioning made to operate on multiple addresses and/or services, as to
 reflect any remote state into the exit status of `ssdc` itself. Chaining of services should be
 handled by the systemd unit files and/or in a script calling `ssdc`.
 
