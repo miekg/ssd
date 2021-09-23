@@ -15,13 +15,13 @@ When `ssdd` starts up it can potentially load unit files from a directory.
 ## Syntax
 
 ~~~
-ssdd [-noauth] [-user FILE] [-load DIR] [-p PORT]
+ssdd [-auth] [-users FILE] [-load DIR] [-p PORT]
 ~~~
 
-* `-noauth`, disables the authentication and authorizaton check in ssdd
-* `-user FILE`, used **FILE** to lookup the users for authorization.
-* `-load DIR`, look in **DIR** for unit files to load (.service, .path)
+* `-auth`, authenticate the request and perform authorizaton check in ssdd
+* `-users FILE`, used **FILE** to lookup the users for authorization.
 * `-p PORT`, bind to port **PORT**
+* `-load DIR`, look in **DIR** for unit files to load (.service, .path)
 
 `ssdd` will call into the user systemd that runs under the same user as itself. The file used for
 user authorization is simplistic, it is just one user name per line.
@@ -46,9 +46,9 @@ handled by the systemd unit files and/or in a script calling `ssdc`.
 The following **OPERATION**s are available:
 
 * `list` - list the loaded unit files, the **SERVICE** is not used in this case and should be
-  omitted. Only .service and .path unit files are shown. This calls `list-units`.
+  omitted. Only .service and .path unit files are shown, This calls `list-units`
 * `cat` - show the contents of the unit file for **SERVICE**
-* `start`, `stop`, `reload`, `restart`, will call the respective
+* `start`, `status`, `stop`, `reload`, and `restart`, will call this respective command
 * `logs`, show the logs of **SERVICE**, assuming they are in journald.
 
 ## Protocol
@@ -65,7 +65,7 @@ are **OPERATION** specific options that some commmand allow, first and foremost 
 There is one mandatory option which is the user issuing the operation. Thus the following options
 are defined:
 
-* `user=USER`, where **USER** is an identifier that identifies the user.
+* ...
 
 ### Authentication and Authorizaton
 
@@ -82,3 +82,7 @@ If the file is empty, the system will fail open and all user are allowed to exec
 Instead of connecting to the systemd DBUS, `ssdd` will simply call `systemd`, this is needed for
 getting the logs anyway, so it's extended to the entire binary. This also prevents `sssd` from
 needing to use a C library, which means it can't be a statically compiled Go binary.
+
+## Bugs
+
+The -load option has not been implemented. The user file might be a bad idea.

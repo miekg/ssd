@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func handler(w http.ResponseWriter, r *http.Request) error {
+func handler(w http.ResponseWriter, r *http.Request, u string) error {
 	p := path.Clean(r.URL.Path)
 	pcs := strings.Split(p, "/")
 	if len(pcs) == 0 {
@@ -53,7 +53,11 @@ func handler(w http.ResponseWriter, r *http.Request) error {
 			return fmt.Errorf("this operation %s requires a service", operation)
 		}
 	}
-	log.Printf("Running command %s on behalve of an anonymous user, from %s", cmd, r.RemoteAddr)
+	if u == "" {
+		log.Printf("Running command %q on behalve of an anonymous user, from %q", cmd, r.RemoteAddr)
+	} else {
+		log.Printf("Running command %q on behalve of user %q, from %q", cmd, u, r.RemoteAddr)
+	}
 
 	return systemd.Run(cmd, stream, w)
 }

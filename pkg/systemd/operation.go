@@ -19,6 +19,7 @@ var OperationToCommand = map[Operation][]string{
 	List:    {sysctl, usr, "list-units"},
 	Cat:     {sysctl, usr, "cat"},
 	Start:   {sysctl, usr, "start"},
+	Status:  {sysctl, usr, "status"},
 	Stop:    {sysctl, usr, "stop"},
 	Reload:  {sysctl, usr, "reload"},
 	Restart: {sysctl, usr, "restart"},
@@ -32,6 +33,7 @@ const (
 	List    Operation = "list"
 	Cat     Operation = "cat"
 	Start   Operation = "start"
+	Status  Operation = "status"
 	Stop    Operation = "stop"
 	Reload  Operation = "reload"
 	Restart Operation = "restart"
