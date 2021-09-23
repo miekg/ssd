@@ -2,7 +2,7 @@
 
 ## Name
 
-* ssd* - Service SystemD, remotely interact with systemd.
+*ssd* - Service SystemD, remotely interact with systemd.
 
 ## Description
 
@@ -18,7 +18,7 @@ When `ssdd` starts up it can potentially load unit files from a directory.
 ssdd [-noauth] [-load DIR] [-p PORT]
 ~~~
 
-* `-noauth`, disables the authentication check in ssdd
+* `-noauth`, disables the authentication and authorizaton check in ssdd
 * `-load DIR`, look in **DIR** for unit files to load (.service, .path)
 * `-p PORT`, bind to port **PORT**
 
