@@ -15,14 +15,21 @@ When `ssdd` starts up it can potentially load unit files from a directory.
 ## Syntax
 
 ~~~
-ssdd [-noauth] [-load DIR] [-p PORT]
+ssdd [-noauth] [-user FILE] [-load DIR] [-p PORT]
 ~~~
 
 * `-noauth`, disables the authentication and authorizaton check in ssdd
+* `-user FILE`, used **FILE** to lookup the users for authorization.
 * `-load DIR`, look in **DIR** for unit files to load (.service, .path)
 * `-p PORT`, bind to port **PORT**
 
-`ssdd` will call into the user systemd that runs under the same user as itself.
+`ssdd` will call into the user systemd that runs under the same user as itself. The file used for
+user authorization is simplistic, it is just one user name per line.
+
+The default port is 9999.
+
+It's assumed `ssdd` is ran via systemd as well, so all interactions it provides can be applied to
+itself.
 
 The client the syntax is as follows:
 ~~~
@@ -65,7 +72,10 @@ are defined:
 A cookie should be included in the request, which conveys 'I have been authenticated'. This is
 implemented in a vendor specific way.
 
-Authorizaton is TDB.
+For authorization the user is looked up a table (=file). If there user is present there the
+operations is allowed, otherwise it is denied.
+
+If the file is empty, the system will fail open and all user are allowed to execute operations.
 
 ## Notes
 
