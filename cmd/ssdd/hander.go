@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"miekg/ssd/pkg/systemd"
 	"net/http"
 	"path"
@@ -52,6 +53,7 @@ func handler(w http.ResponseWriter, r *http.Request) error {
 			return fmt.Errorf("this operation %s requires a service", operation)
 		}
 	}
+	log.Printf("Running command %s on behalve of an anonymous user, from %s", cmd, r.RemoteAddr)
 
 	return systemd.Run(cmd, stream, w)
 }
