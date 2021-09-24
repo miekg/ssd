@@ -29,6 +29,8 @@ user authorization is simplistic, it is just one user name per line.
 The default port is 9999. Metrics are served from the same port on the /metrics path. The same port
 also provides a /health handler that return "200 OK".
 
+Help is available on the /h endpoint.
+
 It's assumed `ssdd` is ran via systemd as well, so all interactions it provides can be applied to
 itself.
 
