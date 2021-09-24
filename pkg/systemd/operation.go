@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"os/exec"
+	"strconv"
 	"time"
 )
 
@@ -51,8 +52,56 @@ type Options struct {
 	SinceTime    time.Time
 }
 
-func ParseOptions(opts url.Values) (Options, error) {
+func ParseOptions(q url.Values) (Options, error) {
 	o := Options{}
+	var err error
+
+	if tailLines := q.Get("tailLines"); tailLines != "" {
+		o.Tail, err = strconv.Atoi(tailLines)
+		if err != nil {
+			return o, err
+		}
+		if o.Tail < 0 {
+			return o, fmt.Errorf("tailLines can't be < 0 ")
+		}
+	}
+	if follow := q.Get("follow"); follow != "" {
+		o.Follow, err = strconv.ParseBool(follow)
+		if err != nil {
+			return o, err
+		}
+	}
+	if limitBytes := q.Get("limitBytes"); limitBytes != "" {
+		o.LimitBytes, err = strconv.Atoi(limitBytes)
+		if err != nil {
+			return o, err
+		}
+	}
+	if previous := q.Get("previous"); previous != "" {
+		o.Previous, err = strconv.ParseBool(previous)
+		if err != nil {
+			return o, err
+		}
+	}
+	if sinceSeconds := q.Get("sinceSeconds"); sinceSeconds != "" {
+		o.SinceSeconds, err = strconv.Atoi(sinceSeconds)
+		if err != nil {
+			return o, err
+		}
+	}
+	if sinceTime := q.Get("sinceTime"); sinceTime != "" {
+		o.SinceTime, err = time.Parse(time.RFC3339, sinceTime)
+		if err != nil {
+			return o, err
+		}
+	}
+	if timestamps := q.Get("timestamps"); timestamps != "" {
+		o.Timestamps, err = strconv.ParseBool(timestamps)
+		if err != nil {
+			return o, err
+		}
+	}
+
 	return o, nil
 }
 
@@ -67,6 +116,30 @@ func Command(op Operation, opts Options, service string) (*exec.Cmd, error) {
 	copy(cmdline, args)
 
 	c := exec.Command(cmdline[0], cmdline[1:]...)
+
+	if opts.Tail > 0 {
+		args = append(args, "-n")
+		args = append(args, fmt.Sprintf("%d", opts.Tail))
+	}
+	if opts.Follow {
+		args = append(args, "-f")
+	}
+	if !opts.Timestamps {
+		args = append(args, "-o")
+		args = append(args, "cat")
+	} else {
+		args = append(args, "-o")
+		args = append(args, "short-full") // this is _not_ the default Go timestamp output
+	}
+	if opts.SinceSeconds > 0 {
+		args = append(args, "-S")
+		args = append(args, fmt.Sprintf("-%ds", opts.SinceSeconds))
+	}
+	if !opts.SinceTime.IsZero() {
+		args = append(args, "-S")
+		args = append(args, opts.SinceTime.Format(time.RFC3339))
+	}
+
 	if service != "" {
 		c.Args = append(c.Args, service)
 	}
