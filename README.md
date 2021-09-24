@@ -52,7 +52,7 @@ The following **OPERATION**s are available:
   omitted. Only .service and .path unit files are shown, This calls `list-units`
 * `cat` - show the contents of the unit file for **SERVICE**
 * `start`, `status`, `stop`, `reload`, and `restart`, will call this respective command
-* `logs`, show the logs of **SERVICE**, assuming they are in journald.
+* `log`, show the logs of **SERVICE**, assuming they are in journald.
 
 ## Protocol
 
@@ -64,11 +64,17 @@ commandline:
 ~~~
 
 Where `s` stands for systemd, and **OPERATION** and **SERVICE** are the same as above. **OPTIONS**
-are **OPERATION** specific options that some commmand allow, first and foremost the `logs` one.
+are **OPERATION** specific options that some commmand allow, first and foremost the `log` one.
 There is one mandatory option which is the user issuing the operation. Thus the following options
 are defined:
 
-* ...
+* tailLines=N
+* follow=true
+* limitBytes=N
+* previous=true
+* sinceSeconds=N
+* sinceTime=TIME (RFC 3339 format)
+* timestamps=true
 
 ### Authentication and Authorizaton
 

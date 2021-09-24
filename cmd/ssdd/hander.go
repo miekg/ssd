@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"miekg/ssd/pkg/systemd"
 	"net/http"
 	"path"
 	"strings"
+	"time"
 )
 
 func handler(w http.ResponseWriter, r *http.Request) error {
@@ -33,7 +35,7 @@ func handler(w http.ResponseWriter, r *http.Request) error {
 		service = pcs[2]
 	}
 
-	opts, err := systemd.ParseOptions(r.Form)
+	opts, err := systemd.ParseOptions(r.URL.Query())
 	if err != nil {
 		return err
 	}
@@ -42,10 +44,9 @@ func handler(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	stream := false
 	switch systemd.Operation(operation) {
-	case systemd.Logs:
-		stream = true
+	case systemd.Log:
+		// nothing
 	case systemd.List:
 		// nothing
 	default:
@@ -54,5 +55,35 @@ func handler(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	log.Printf("Running command %q initiated from %q", cmd, r.RemoteAddr)
-	return systemd.Run(cmd, stream, w)
+
+	if !opts.Follow {
+		return systemd.Run(cmd, w)
+
+	}
+
+	// Should only be the case for journalctl, but we don't really care.
+	rc, cancel, err := systemd.RunPipe(cmd)
+	if err != nil {
+		return err
+	}
+	defer rc.Close()
+	defer cancel()
+
+	// If in follow mode, follow until interrupted.
+	untilTime := make(chan time.Time, 1)
+	errChan := make(chan error, 1)
+
+	go func(w io.Writer, errChan chan error) {
+		err := systemd.Follow(untilTime, rc, w)
+		errChan <- err
+	}(systemd.FlushWriter(w), errChan)
+
+	// Stop following logs if request context is completed.
+	select {
+	case err := <-errChan:
+		return err
+	case <-r.Context().Done():
+		close(untilTime)
+	}
+	return nil
 }

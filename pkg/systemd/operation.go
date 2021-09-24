@@ -2,6 +2,8 @@ package systemd
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os/exec"
@@ -24,7 +26,7 @@ var OperationToCommand = map[Operation][]string{
 	Stop:    {sysctl, usr, "stop"},
 	Reload:  {sysctl, usr, "reload"},
 	Restart: {sysctl, usr, "restart"},
-	Logs:    {"journalctl", usr},
+	Log:     {"journalctl", usr},
 }
 
 // Operations specifies a systemd/journald operation.
@@ -38,7 +40,7 @@ const (
 	Stop    Operation = "stop"
 	Reload  Operation = "reload"
 	Restart Operation = "restart"
-	Logs    Operation = "logs"
+	Log     Operation = "log"
 )
 
 // Options are extra options that can be given to operations.
@@ -53,6 +55,7 @@ type Options struct {
 }
 
 func ParseOptions(q url.Values) (Options, error) {
+	fmt.Printf("%v\n", q)
 	o := Options{}
 	var err error
 
@@ -106,6 +109,7 @@ func ParseOptions(q url.Values) (Options, error) {
 }
 
 func Command(op Operation, opts Options, service string) (*exec.Cmd, error) {
+	fmt.Printf("%v\n", opts)
 	args, ok := OperationToCommand[op]
 	if !ok {
 		return nil, fmt.Errorf("no command found for %s", op)
@@ -118,29 +122,32 @@ func Command(op Operation, opts Options, service string) (*exec.Cmd, error) {
 	c := exec.Command(cmdline[0], cmdline[1:]...)
 
 	if opts.Tail > 0 {
-		args = append(args, "-n")
-		args = append(args, fmt.Sprintf("%d", opts.Tail))
+		c.Args = append(c.Args, "-n")
+		c.Args = append(c.Args, fmt.Sprintf("%d", opts.Tail))
 	}
 	if opts.Follow {
-		args = append(args, "-f")
+		c.Args = append(c.Args, "-f")
 	}
 	if !opts.Timestamps {
-		args = append(args, "-o")
-		args = append(args, "cat")
+		c.Args = append(c.Args, "-o")
+		c.Args = append(c.Args, "cat")
 	} else {
-		args = append(args, "-o")
-		args = append(args, "short-full") // this is _not_ the default Go timestamp output
+		c.Args = append(c.Args, "-o")
+		c.Args = append(c.Args, "short-full") // this is _not_ the default Go timestamp output
 	}
 	if opts.SinceSeconds > 0 {
-		args = append(args, "-S")
-		args = append(args, fmt.Sprintf("-%ds", opts.SinceSeconds))
+		c.Args = append(c.Args, "-S")
+		c.Args = append(c.Args, fmt.Sprintf("-%ds", opts.SinceSeconds))
 	}
 	if !opts.SinceTime.IsZero() {
-		args = append(args, "-S")
-		args = append(args, opts.SinceTime.Format(time.RFC3339))
+		c.Args = append(c.Args, "-S")
+		c.Args = append(c.Args, opts.SinceTime.Format(time.RFC3339))
 	}
 
 	if service != "" {
+		if op == Log {
+			c.Args = append(c.Args, "-u")
+		}
 		c.Args = append(c.Args, service)
 	}
 
@@ -149,7 +156,7 @@ func Command(op Operation, opts Options, service string) (*exec.Cmd, error) {
 
 // Run runs command c and writes the response back to the user. In case of
 // logging this will be a streaming response.
-func Run(c *exec.Cmd, stream bool, w http.ResponseWriter) error {
+func Run(c *exec.Cmd, w http.ResponseWriter) error {
 	out, err := c.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to execute %s: %s", c, err)
@@ -158,4 +165,29 @@ func Run(c *exec.Cmd, stream bool, w http.ResponseWriter) error {
 	w.WriteHeader(http.StatusOK)
 	w.Write(out)
 	return nil
+}
+
+// RunPipe runs command c and attaches a pipe and returns that as an io.ReadCloser.
+func RunPipe(c *exec.Cmd) (io.ReadCloser, func() error, error) {
+	cancel := func() error { return nil }
+
+	p, err := c.StdoutPipe()
+	if err != nil {
+		return nil, cancel, err
+	}
+
+	if err := c.Start(); err != nil {
+		return nil, cancel, err
+	}
+
+	cancel = func() error {
+		go func() {
+			if err := c.Wait(); err != nil {
+				log.Printf("wait for %q failed: %s", c, err)
+			}
+		}()
+		return c.Process.Kill()
+	}
+
+	return p, cancel, nil
 }

@@ -4,42 +4,13 @@ import (
 	"bufio"
 	"errors"
 	"io"
-	"log"
-	"os/exec"
 	"time"
 )
 
-func journalReader(service string, opts Options) (io.ReadCloser, func() error, error) {
-	cancel := func() error { return nil } // initialize as noop
-
-	cmd := exec.Command(journalctl, args...)
-	p, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, cancel, err
-	}
-
-	if err := cmd.Start(); err != nil {
-		return nil, cancel, err
-	}
-
-	cancel = func() error {
-		go func() {
-			if err := cmd.Wait(); err != nil {
-				log.Printf("wait for %q failed: %s", journalctl, err)
-			}
-		}()
-		return cmd.Process.Kill()
-	}
-
-	return p, cancel, nil
-}
-
-var ErrExpired = errors.New("timeout expired")
-
-// journalFollow synchronously follows the io.Reader, writing each new journal entry to writer. The
+// Follow synchronously follows the io.Reader, writing each new journal entry to writer. The
 // follow will continue until a single time.Time is received on the until channel (or it's closed).
-func journalFollow(until <-chan time.Time, reader io.Reader, writer io.Writer) error {
-	scanner := bufio.NewScanner(reader)
+func Follow(until <-chan time.Time, r io.Reader, w io.Writer) error {
+	scanner := bufio.NewScanner(r)
 	bufch := make(chan []byte)
 	errch := make(chan error)
 
@@ -60,18 +31,42 @@ func journalFollow(until <-chan time.Time, reader io.Reader, writer io.Writer) e
 	for {
 		select {
 		case <-until:
-			return ErrExpired
+			return errors.New("timeout expired")
 
 		case err := <-errch:
 			return err
 
 		case buf := <-bufch:
-			if _, err := writer.Write(buf); err != nil {
+			if _, err := w.Write(buf); err != nil {
 				return err
 			}
-			if _, err := io.WriteString(writer, "\n"); err != nil {
+			if _, err := io.WriteString(w, "\n"); err != nil {
 				return err
 			}
 		}
 	}
+}
+
+func FlushWriter(w io.Writer) io.Writer {
+	if fw, ok := w.(writeFlusher); ok {
+		return &flushWriter{fw}
+	}
+	return w
+}
+
+type flushWriter struct {
+	w writeFlusher
+}
+
+type writeFlusher interface {
+	Flush()
+	Write([]byte) (int, error)
+}
+
+func (fw *flushWriter) Write(p []byte) (int, error) {
+	n, err := fw.w.Write(p)
+	if n > 0 {
+		fw.w.Flush()
+	}
+	return n, err
 }
